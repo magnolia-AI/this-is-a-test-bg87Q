@@ -17,12 +17,11 @@ export function getPlants(): Plant[] {
 // Save plants to localStorage
 export function savePlants(plants: Plant[]): void {
   if (typeof window === 'undefined') return;
-  
   localStorage.setItem(PLANTS_STORAGE_KEY, JSON.stringify(plants));
 }
 
 // Add a new plant
-export function addPlant(plant: Omit<Plant, 'id' | 'nextWatering'>): Plant {
+export function addPlant(plant: Omit<Plant, 'id' | 'lastWatered' | 'nextWatering'>): Plant {
   const plants = getPlants();
   
   const now = new Date();
@@ -86,22 +85,27 @@ export function formatDate(dateString: string): string {
   return format(parseISO(dateString), 'MMM d, yyyy');
 }
 
-// Get days until next watering
-export function getDaysUntilWatering(nextWateringDate: string): number {
+// Get plants that need watering today
+export function getPlantsNeedingWater(): Plant[] {
+  const plants = getPlants();
   const today = new Date();
-  const nextDate = parseISO(nextWateringDate);
+  today.setHours(0, 0, 0, 0);
   
-  const diffTime = nextDate.getTime() - today.getTime();
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-  
-  return diffDays;
+  return plants.filter(plant => {
+    const nextWatering = new Date(plant.nextWatering);
+    nextWatering.setHours(0, 0, 0, 0);
+    return nextWatering <= today;
+  });
 }
 
-// Get watering status
-export function getWateringStatus(nextWateringDate: string): 'overdue' | 'today' | 'upcoming' {
-  const daysUntil = getDaysUntilWatering(nextWateringDate);
+// Calculate days until next watering
+export function getDaysUntilWatering(nextWateringDate: string): number {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
   
-  if (daysUntil < 0) return 'overdue';
-  if (daysUntil === 0) return 'today';
-  return 'upcoming';
+  const nextWatering = new Date(nextWateringDate);
+  nextWatering.setHours(0, 0, 0, 0);
+  
+  const diffTime = nextWatering.getTime() - today.getTime();
+  return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 }
